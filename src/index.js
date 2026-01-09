@@ -1,4 +1,5 @@
 const express = require('express');
+const path = require('path');
 const config = require('../config');
 const logger = require('./utils/logger');
 const whatsappClient = require('./whatsapp/client');
@@ -11,15 +12,24 @@ const app = express();
 // Middleware
 app.use(express.json());
 app.use(requestLogger);
-app.use(apiKeyAuth);
+
+// Serve static files from public folder (before API key auth)
+app.use(express.static(path.join(__dirname, '../public')));
+
+// Dashboard route (no auth required)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/dashboard.html'));
+});
+
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/dashboard.html'));
+});
+
+// Apply API key auth only to /api routes
+app.use('/api', apiKeyAuth);
 
 // API Routes
 app.use('/api', routes);
-
-// Root redirect to status
-app.get('/', (req, res) => {
-    res.redirect('/api/status');
-});
 
 // Error handler
 app.use(errorHandler);
