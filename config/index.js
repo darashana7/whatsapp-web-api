@@ -3,17 +3,17 @@ require('dotenv').config();
 module.exports = {
   // Server
   port: process.env.PORT || 3000,
-  
+
   // API Security
   apiKey: process.env.API_KEY || null,
-  
+
   // Phone Configuration
   defaultCountryCode: process.env.DEFAULT_COUNTRY_CODE || '91',
-  
+
   // Auto-Reply Configuration
   autoReply: {
     enabled: process.env.AUTO_REPLY_ENABLED !== 'false',
-    cooldown: parseInt(process.env.AUTO_REPLY_COOLDOWN) || 60, // seconds
+    cooldown: parseInt(process.env.AUTO_REPLY_COOLDOWN) || 5, // seconds (reduced for faster replies)
     defaultMessage: "Thanks for your message! We'll get back to you soon. 🙏",
     keywords: {
       'hi': "Hello! 👋 How can I help you today?",
@@ -31,10 +31,10 @@ module.exports = {
       'no': null
     }
   },
-  
+
   // MongoDB (for Railway session persistence)
   mongoUri: process.env.MONGODB_URI || null,
-  
+
   // Puppeteer
   puppeteerExecutablePath: process.env.PUPPETEER_EXECUTABLE_PATH || null
 };

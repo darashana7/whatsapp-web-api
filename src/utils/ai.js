@@ -43,17 +43,21 @@ class AIService {
      */
     async generateReply(userMessage, senderName = null) {
         if (!this.isEnabled()) {
+            logger.debug('AI Service not enabled - no API key configured');
             return null;
         }
 
         try {
+            logger.debug(`AI generating reply for: "${userMessage.substring(0, 50)}..."`);
+
             if (this.provider === 'openrouter') {
                 return await this.callOpenRouter(userMessage, senderName);
             } else if (this.provider === 'google') {
                 return await this.callGoogleGemini(userMessage, senderName);
             }
         } catch (error) {
-            logger.error('AI Service error:', error.message);
+            logger.error(`AI Service error: ${error.message}`);
+            // Return null to fallback to keyword replies
             return null;
         }
     }
