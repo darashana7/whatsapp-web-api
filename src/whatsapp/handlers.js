@@ -334,6 +334,14 @@ function updateAutoReplyConfig(newConfig) {
     if (typeof newConfig.enabled === 'boolean') {
         autoReplyConfig.enabled = newConfig.enabled;
     }
+    if (typeof newConfig.useAI === 'boolean') {
+        autoReplyConfig.useAI = newConfig.useAI;
+        logger.info(`AI replies ${newConfig.useAI ? 'enabled' : 'disabled'}`);
+    }
+    if (typeof newConfig.useDatabase === 'boolean') {
+        autoReplyConfig.useDatabase = newConfig.useDatabase;
+        logger.info(`Database queries ${newConfig.useDatabase ? 'enabled' : 'disabled'}`);
+    }
     if (typeof newConfig.defaultMessage === 'string') {
         autoReplyConfig.defaultMessage = newConfig.defaultMessage;
     }

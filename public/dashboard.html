@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -201,14 +202,16 @@
             display: inline-block;
             width: 20px;
             height: 20px;
-            border: 2px solid rgba(255,255,255,0.3);
+            border: 2px solid rgba(255, 255, 255, 0.3);
             border-radius: 50%;
             border-top-color: #fff;
             animation: spin 1s linear infinite;
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         .badge {
@@ -269,7 +272,7 @@
 
         .log-entry {
             padding: 5px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
         }
 
         .log-entry .time {
@@ -277,9 +280,17 @@
             margin-right: 10px;
         }
 
-        .log-entry.success { color: #25D366; }
-        .log-entry.error { color: #ff6b6b; }
-        .log-entry.info { color: #64b5f6; }
+        .log-entry.success {
+            color: #25D366;
+        }
+
+        .log-entry.error {
+            color: #ff6b6b;
+        }
+
+        .log-entry.info {
+            color: #64b5f6;
+        }
 
         footer {
             text-align: center;
@@ -297,15 +308,18 @@
             header h1 {
                 font-size: 1.8rem;
             }
+
             .grid {
                 grid-template-columns: 1fr;
             }
+
             .status-grid {
                 grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <header>
@@ -314,6 +328,18 @@
         </header>
 
         <div class="grid">
+            <!-- Quick Actions Bar -->
+            <div class="card"
+                style="grid-column: 1 / -1; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
+                <a href="/api/qr?format=html" target="_blank" class="btn btn-primary" style="text-decoration: none;">
+                    📱 Open QR Code
+                </a>
+                <button class="btn btn-secondary" onclick="refreshStatus()">🔄 Refresh Status</button>
+                <a href="/api/health" target="_blank" class="btn btn-secondary" style="text-decoration: none;">
+                    💚 Health Check
+                </a>
+            </div>
+
             <!-- Status Card -->
             <div class="card">
                 <h2><span>📊</span> Connection Status</h2>
@@ -335,8 +361,32 @@
                         <div class="value" id="uptime">Loading...</div>
                     </div>
                 </div>
-                <div style="margin-top: 15px;">
-                    <button class="btn btn-secondary" onclick="refreshStatus()">🔄 Refresh Status</button>
+            </div>
+
+            <!-- AI Settings Card -->
+            <div class="card">
+                <h2><span>⚙️</span> AI Settings</h2>
+                <div class="form-group">
+                    <label>AI Status</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button class="btn btn-primary" id="toggle-ai-btn" onclick="toggleAI()">
+                            🤖 Toggle AI
+                        </button>
+                        <span id="ai-toggle-status" class="badge badge-success">Enabled</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Database Queries</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button class="btn btn-secondary" id="toggle-db-btn" onclick="toggleDB()">
+                            📊 Toggle DB
+                        </button>
+                        <span id="db-toggle-status" class="badge badge-success">Enabled</span>
+                    </div>
+                </div>
+                <div style="margin-top: 15px; font-size: 0.85rem; color: #888;">
+                    <p>💡 AI uses live database for responses</p>
+                    <p>📍 API: supratravels.gt.tc/api/bot.php</p>
                 </div>
             </div>
 
@@ -361,10 +411,12 @@
             <div class="card">
                 <h2><span>🤖</span> Test AI Response</h2>
                 <div class="quick-actions">
-                    <button class="quick-btn" onclick="testAI('Hello!')">Hello!</button>
-                    <button class="quick-btn" onclick="testAI('What is your name?')">What is your name?</button>
-                    <button class="quick-btn" onclick="testAI('Tell me a joke')">Tell me a joke</button>
-                    <button class="quick-btn" onclick="testAI('Help me')">Help me</button>
+                    <button class="quick-btn" onclick="testAI('Hi')">Hi</button>
+                    <button class="quick-btn" onclick="testAI('Check my booking')">My Booking</button>
+                    <button class="quick-btn" onclick="testAI('Seats available tomorrow?')">Availability</button>
+                    <button class="quick-btn" onclick="testAI('Bus schedule')">Schedule</button>
+                    <button class="quick-btn" onclick="testAI('Price for Bangalore to Hosadurga')">Price</button>
+                    <button class="quick-btn" onclick="testAI('Tour packages')">Packages</button>
                 </div>
                 <div class="form-group">
                     <label>Test Message</label>
@@ -392,7 +444,9 @@
         </div>
 
         <footer>
-            <p>WhatsApp Web API &bull; <a href="/api/health" target="_blank">Health Check</a> &bull; <a href="/api/qr?format=html" target="_blank">QR Code</a></p>
+            <p>WhatsApp Web API &bull; <a href="/api/qr?format=html" target="_blank">📱 QR Code</a> &bull; <a
+                    href="/api/health" target="_blank">Health Check</a> &bull; <a href="https://supratravels.gt.tc"
+                    target="_blank">Supra Travels</a></p>
         </footer>
     </div>
 
@@ -428,12 +482,12 @@
         async function refreshStatus() {
             try {
                 addLog('Fetching status...');
-                
+
                 const [statusRes, healthRes] = await Promise.all([
                     fetch(`${API_BASE}/status`),
                     fetch(`${API_BASE}/health`)
                 ]);
-                
+
                 const status = await statusRes.json();
                 const health = await healthRes.json();
 
@@ -572,6 +626,58 @@
             }
         }
 
+        // Toggle AI on/off
+        async function toggleAI() {
+            const statusBadge = document.getElementById('ai-toggle-status');
+            addLog('Toggling AI status...');
+
+            try {
+                const res = await fetch(`${API_BASE}/auto-reply`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ useAI: statusBadge.textContent === 'Disabled' })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    const newStatus = data.config?.useAI ?? true;
+                    statusBadge.textContent = newStatus ? 'Enabled' : 'Disabled';
+                    statusBadge.className = newStatus ? 'badge badge-success' : 'badge badge-error';
+                    addLog(`AI ${newStatus ? 'enabled' : 'disabled'}`, 'success');
+                } else {
+                    addLog(`Failed to toggle AI: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                addLog(`Error toggling AI: ${error.message}`, 'error');
+            }
+        }
+
+        // Toggle Database queries on/off
+        async function toggleDB() {
+            const statusBadge = document.getElementById('db-toggle-status');
+            addLog('Toggling Database queries...');
+
+            try {
+                const res = await fetch(`${API_BASE}/auto-reply`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ useDatabase: statusBadge.textContent === 'Disabled' })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    const newStatus = data.config?.useDatabase ?? true;
+                    statusBadge.textContent = newStatus ? 'Enabled' : 'Disabled';
+                    statusBadge.className = newStatus ? 'badge badge-success' : 'badge badge-error';
+                    addLog(`Database queries ${newStatus ? 'enabled' : 'disabled'}`, 'success');
+                } else {
+                    addLog(`Failed to toggle DB: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                addLog(`Error toggling DB: ${error.message}`, 'error');
+            }
+        }
+
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
             refreshStatus();
@@ -585,4 +691,5 @@
         });
     </script>
 </body>
+
 </html>
