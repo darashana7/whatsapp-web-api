@@ -50,20 +50,30 @@ function setupMessageHandlers(client) {
 async function handleDatabaseQuery(messageText, senderPhone) {
     const textLower = messageText.toLowerCase();
 
-    // Check booking status - "my booking", "booking status", "check booking"
-    if (textLower.includes('my booking') ||
-        textLower.includes('booking status') ||
-        textLower.includes('check booking') ||
-        textLower.includes('my ticket')) {
-        logger.info(`📊 Checking booking for ${senderPhone}`);
-        const data = await supraApi.lookupBooking(senderPhone);
-        return supraApi.formatBookingResponse(data);
+    // Check booking status - expanded triggers
+    if (textLower.includes('booking') ||
+        textLower.includes('ticket') ||
+        textLower.includes('reservation') ||
+        textLower.includes('booked') ||
+        textLower.includes('my seat')) {
+        logger.info(`📊 DB Query: Checking booking for ${senderPhone}`);
+        try {
+            const data = await supraApi.lookupBooking(senderPhone);
+            logger.info(`📊 DB Response: ${JSON.stringify(data)}`);
+            if (data) {
+                return supraApi.formatBookingResponse(data);
+            }
+        } catch (error) {
+            logger.error(`📊 DB Error (booking): ${error.message}`);
+        }
     }
 
-    // Check seat availability - "seats available", "availability"
-    if (textLower.includes('seats available') ||
+    // Check seat availability - expanded triggers
+    if (textLower.includes('seat') ||
+        textLower.includes('available') ||
         textLower.includes('availability') ||
-        textLower.includes('seats left')) {
+        textLower.includes('how many') ||
+        textLower.includes('left')) {
         // Try to extract date from message
         let date = null;
         if (textLower.includes('tomorrow')) {
@@ -80,18 +90,35 @@ async function handleDatabaseQuery(messageText, senderPhone) {
             routeId = 2;
         }
 
-        logger.info(`📊 Checking availability: route ${routeId}, date ${date || 'today'}`);
-        const data = await supraApi.checkAvailability(routeId, date);
-        return supraApi.formatAvailabilityResponse(data);
+        logger.info(`📊 DB Query: Checking availability - route ${routeId}, date ${date || 'today'}`);
+        try {
+            const data = await supraApi.checkAvailability(routeId, date);
+            logger.info(`📊 DB Response: ${JSON.stringify(data)}`);
+            if (data) {
+                return supraApi.formatAvailabilityResponse(data);
+            }
+        } catch (error) {
+            logger.error(`📊 DB Error (availability): ${error.message}`);
+        }
     }
 
-    // Get schedule
+    // Get schedule - expanded triggers
     if (textLower.includes('schedule') ||
         textLower.includes('timing') ||
-        textLower.includes('what time')) {
-        logger.info(`📊 Getting schedule`);
-        const data = await supraApi.getSchedule();
-        return supraApi.formatScheduleResponse(data);
+        textLower.includes('time') ||
+        textLower.includes('when') ||
+        textLower.includes('departure') ||
+        textLower.includes('arrive')) {
+        logger.info(`📊 DB Query: Getting schedule`);
+        try {
+            const data = await supraApi.getSchedule();
+            logger.info(`📊 DB Response: ${JSON.stringify(data)}`);
+            if (data) {
+                return supraApi.formatScheduleResponse(data);
+            }
+        } catch (error) {
+            logger.error(`📊 DB Error (schedule): ${error.message}`);
+        }
     }
 
     return null; // Not a database query
