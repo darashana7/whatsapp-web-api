@@ -3,6 +3,7 @@ const router = express.Router();
 const whatsappClient = require('../whatsapp/client');
 const { getAutoReplyConfig, updateAutoReplyConfig, setKeyword, removeKeyword } = require('../whatsapp/handlers');
 const { isValidPhoneNumber, normalizePhoneNumber } = require('../utils/phone');
+const aiService = require('../utils/ai');
 const logger = require('../utils/logger');
 
 /**
@@ -23,7 +24,8 @@ router.get('/status', (req, res) => {
     const status = whatsappClient.getStatus();
     res.json({
         whatsapp: status,
-        autoReply: getAutoReplyConfig().enabled
+        autoReply: getAutoReplyConfig().enabled,
+        ai: aiService.getConfig()
     });
 });
 
@@ -256,6 +258,73 @@ router.delete('/auto-reply/keyword/:keyword', (req, res) => {
         success: true,
         message: `Keyword '${keyword}' removed`
     });
+});
+
+/**
+ * Get AI configuration
+ */
+router.get('/ai', (req, res) => {
+    res.json({
+        success: true,
+        config: aiService.getConfig()
+    });
+});
+
+/**
+ * Update AI system prompt
+ */
+router.put('/ai/prompt', (req, res) => {
+    const { prompt } = req.body;
+
+    if (!prompt) {
+        return res.status(400).json({
+            success: false,
+            error: 'Prompt is required'
+        });
+    }
+
+    aiService.setSystemPrompt(prompt);
+
+    res.json({
+        success: true,
+        message: 'System prompt updated',
+        config: aiService.getConfig()
+    });
+});
+
+/**
+ * Test AI response
+ */
+router.post('/ai/test', async (req, res) => {
+    const { message } = req.body;
+
+    if (!message) {
+        return res.status(400).json({
+            success: false,
+            error: 'Message is required'
+        });
+    }
+
+    if (!aiService.isEnabled()) {
+        return res.status(400).json({
+            success: false,
+            error: 'AI is not configured. Set OPENROUTER_API_KEY or GOOGLE_API_KEY in environment variables.'
+        });
+    }
+
+    try {
+        const reply = await aiService.generateReply(message);
+        res.json({
+            success: true,
+            input: message,
+            reply: reply
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
 });
 
 module.exports = router;

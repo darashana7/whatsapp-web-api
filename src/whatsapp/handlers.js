@@ -1,5 +1,6 @@
 const config = require('../../config');
 const logger = require('../utils/logger');
+const aiService = require('../utils/ai');
 const { fromWhatsAppId } = require('../utils/phone');
 
 // Track cooldown for each sender
@@ -8,6 +9,7 @@ const cooldownMap = new Map();
 // Runtime auto-reply configuration (can be updated via API)
 let autoReplyConfig = {
     enabled: config.autoReply.enabled,
+    useAI: true, // Use AI if available
     defaultMessage: config.autoReply.defaultMessage,
     keywords: { ...config.autoReply.keywords },
     cooldown: config.autoReply.cooldown
@@ -47,9 +49,10 @@ async function handleIncomingMessage(message) {
     if (message.from.includes('@g.us')) return; // Skip group messages
 
     const sender = fromWhatsAppId(message.from);
-    const messageText = message.body.toLowerCase().trim();
+    const messageText = message.body.trim();
+    const messageTextLower = messageText.toLowerCase();
 
-    logger.info(`📥 Message from ${sender}: ${message.body.substring(0, 100)}`);
+    logger.info(`📥 Message from ${sender}: ${messageText.substring(0, 100)}`);
 
     // Check if auto-reply is enabled
     if (!autoReplyConfig.enabled) {
@@ -63,15 +66,47 @@ async function handleIncomingMessage(message) {
         return;
     }
 
-    // Find matching keyword reply
-    let replyMessage = findKeywordReply(messageText);
-
-    // If no keyword match and we have a default message, use it
-    if (replyMessage === undefined) {
-        replyMessage = autoReplyConfig.defaultMessage;
+    // Check for explicit no-reply keywords first (like "ok", "yes", etc.)
+    if (autoReplyConfig.keywords.hasOwnProperty(messageTextLower) &&
+        autoReplyConfig.keywords[messageTextLower] === null) {
+        logger.debug('No reply configured for this message type');
+        return;
     }
 
-    // null means explicitly no reply (for acknowledgement words like "ok", "yes")
+    let replyMessage = null;
+
+    // Try AI first if enabled and available
+    if (autoReplyConfig.useAI && aiService.isEnabled()) {
+        try {
+            // Get contact name if available
+            let senderName = null;
+            try {
+                const contact = await message.getContact();
+                senderName = contact.pushname || contact.name || null;
+            } catch (e) {
+                // Ignore contact fetch errors
+            }
+
+            replyMessage = await aiService.generateReply(messageText, senderName);
+            if (replyMessage) {
+                logger.info(`🤖 AI generated reply for ${sender}`);
+            }
+        } catch (error) {
+            logger.error('AI reply failed, falling back to keywords:', error.message);
+        }
+    }
+
+    // Fallback to keyword matching if AI didn't respond
+    if (!replyMessage) {
+        replyMessage = findKeywordReply(messageTextLower);
+
+        // If no keyword match, use default message
+        if (replyMessage === undefined) {
+            replyMessage = autoReplyConfig.defaultMessage;
+        }
+    }
+
+    // null means explicitly no reply
     if (replyMessage === null) {
         logger.debug('No reply configured for this message type');
         return;
