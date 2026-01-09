@@ -340,7 +340,7 @@ router.post('/ai/test', async (req, res) => {
     }
 
     try {
-        const reply = await aiService.generateReply(message);
+        const reply = await aiService.generateReply(message, null, null, true);
         res.json({
             success: true,
             input: message,

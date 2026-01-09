@@ -170,9 +170,10 @@ For availability:
      * @param {object} liveData - Optional live data from database
      * @returns {Promise<string|null>} - AI response or null on error
      */
-    async generateReply(userMessage, senderName = null, liveData = null) {
+    async generateReply(userMessage, senderName = null, liveData = null, throwOnError = false) {
         if (!this.isEnabled()) {
             logger.debug('AI Service not enabled - no API key configured');
+            if (throwOnError) throw new Error('AI Service not enabled');
             return null;
         }
 
@@ -198,6 +199,7 @@ For availability:
             }
         } catch (error) {
             logger.error(`AI Service error: ${error.message}`);
+            if (throwOnError) throw error;
             // Return null to fallback to keyword replies
             return null;
         }
