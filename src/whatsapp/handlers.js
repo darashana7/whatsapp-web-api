@@ -1,6 +1,7 @@
 const config = require('../../config');
 const logger = require('../utils/logger');
 const aiService = require('../utils/ai');
+const supraApi = require('../utils/supra-api');
 const { fromWhatsAppId } = require('../utils/phone');
 
 // Track cooldown for each sender
@@ -10,6 +11,7 @@ const cooldownMap = new Map();
 let autoReplyConfig = {
     enabled: config.autoReply.enabled,
     useAI: true, // Use AI if available
+    useDatabase: true, // Use database queries
     defaultMessage: config.autoReply.defaultMessage,
     keywords: { ...config.autoReply.keywords },
     cooldown: config.autoReply.cooldown
@@ -37,6 +39,62 @@ function setupMessageHandlers(client) {
     });
 
     logger.info('Message handlers registered');
+}
+
+/**
+ * Check for database query commands
+ * @param {string} messageText - Original message text
+ * @param {string} senderPhone - Sender's phone number
+ * @returns {Promise<string|null>} - Response or null if not a DB command
+ */
+async function handleDatabaseQuery(messageText, senderPhone) {
+    const textLower = messageText.toLowerCase();
+
+    // Check booking status - "my booking", "booking status", "check booking"
+    if (textLower.includes('my booking') ||
+        textLower.includes('booking status') ||
+        textLower.includes('check booking') ||
+        textLower.includes('my ticket')) {
+        logger.info(`📊 Checking booking for ${senderPhone}`);
+        const data = await supraApi.lookupBooking(senderPhone);
+        return supraApi.formatBookingResponse(data);
+    }
+
+    // Check seat availability - "seats available", "availability"
+    if (textLower.includes('seats available') ||
+        textLower.includes('availability') ||
+        textLower.includes('seats left')) {
+        // Try to extract date from message
+        let date = null;
+        if (textLower.includes('tomorrow')) {
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            date = tomorrow.toISOString().split('T')[0];
+        } else if (textLower.includes('today')) {
+            date = new Date().toISOString().split('T')[0];
+        }
+
+        // Try to detect route
+        let routeId = 1; // Default: Bangalore -> Hosadurga
+        if (textLower.includes('hosadurga to') || textLower.includes('from hosadurga')) {
+            routeId = 2;
+        }
+
+        logger.info(`📊 Checking availability: route ${routeId}, date ${date || 'today'}`);
+        const data = await supraApi.checkAvailability(routeId, date);
+        return supraApi.formatAvailabilityResponse(data);
+    }
+
+    // Get schedule
+    if (textLower.includes('schedule') ||
+        textLower.includes('timing') ||
+        textLower.includes('what time')) {
+        logger.info(`📊 Getting schedule`);
+        const data = await supraApi.getSchedule();
+        return supraApi.formatScheduleResponse(data);
+    }
+
+    return null; // Not a database query
 }
 
 /**
@@ -75,8 +133,20 @@ async function handleIncomingMessage(message) {
 
     let replyMessage = null;
 
-    // Try AI first if enabled and available
-    if (autoReplyConfig.useAI && aiService.isEnabled()) {
+    // 1. First try database queries (booking lookup, availability, etc.)
+    if (autoReplyConfig.useDatabase) {
+        try {
+            replyMessage = await handleDatabaseQuery(messageText, sender);
+            if (replyMessage) {
+                logger.info(`📊 Database query response for ${sender}`);
+            }
+        } catch (error) {
+            logger.error('Database query failed:', error.message);
+        }
+    }
+
+    // 2. Try AI if no database response
+    if (!replyMessage && autoReplyConfig.useAI && aiService.isEnabled()) {
         try {
             // Get contact name if available
             let senderName = null;
@@ -96,7 +166,7 @@ async function handleIncomingMessage(message) {
         }
     }
 
-    // Fallback to keyword matching if AI didn't respond
+    // 3. Fallback to keyword matching if AI didn't respond
     if (!replyMessage) {
         replyMessage = findKeywordReply(messageTextLower);
 
