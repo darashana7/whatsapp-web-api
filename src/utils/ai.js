@@ -66,21 +66,34 @@ Always guide customers to book online or contact via phone. Be helpful, professi
      * Generate AI response for a message
      * @param {string} userMessage - The user's message
      * @param {string} senderName - Optional sender name for context
+     * @param {object} liveData - Optional live data from database
      * @returns {Promise<string|null>} - AI response or null on error
      */
-    async generateReply(userMessage, senderName = null) {
+    async generateReply(userMessage, senderName = null, liveData = null) {
         if (!this.isEnabled()) {
             logger.debug('AI Service not enabled - no API key configured');
             return null;
         }
 
         try {
+            // Build context with live data if available
+            let contextMessage = userMessage;
+            if (liveData) {
+                contextMessage = `USER MESSAGE: ${userMessage}\n\n`;
+                contextMessage += `LIVE DATABASE INFO (use this to respond accurately):\n`;
+                contextMessage += JSON.stringify(liveData, null, 2);
+                contextMessage += `\n\nRespond to the user using the above live data. Be specific with numbers, dates, and details from the data.`;
+            }
+
             logger.debug(`AI generating reply for: "${userMessage.substring(0, 50)}..."`);
+            if (liveData) {
+                logger.debug(`AI has live data context: ${Object.keys(liveData).join(', ')}`);
+            }
 
             if (this.provider === 'openrouter') {
-                return await this.callOpenRouter(userMessage, senderName);
+                return await this.callOpenRouter(contextMessage, senderName);
             } else if (this.provider === 'google') {
-                return await this.callGoogleGemini(userMessage, senderName);
+                return await this.callGoogleGemini(contextMessage, senderName);
             }
         } catch (error) {
             logger.error(`AI Service error: ${error.message}`);

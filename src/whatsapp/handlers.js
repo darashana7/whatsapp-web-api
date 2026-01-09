@@ -172,7 +172,7 @@ async function handleIncomingMessage(message) {
         }
     }
 
-    // 2. Try AI if no database response
+    // 2. Try AI with live database context
     if (!replyMessage && autoReplyConfig.useAI && aiService.isEnabled()) {
         try {
             // Get contact name if available
@@ -184,9 +184,52 @@ async function handleIncomingMessage(message) {
                 // Ignore contact fetch errors
             }
 
-            replyMessage = await aiService.generateReply(messageText, senderName);
+            // Fetch relevant database data to give AI context
+            let liveData = {};
+
+            // Try to get booking info for this customer
+            try {
+                const bookingData = await supraApi.lookupBooking(sender);
+                if (bookingData && bookingData.success) {
+                    liveData.customerBookings = bookingData;
+                    logger.info(`📊 Fetched booking data for AI context`);
+                }
+            } catch (e) {
+                logger.debug(`Could not fetch booking: ${e.message}`);
+            }
+
+            // Try to get today's availability
+            try {
+                const availabilityData = await supraApi.checkAvailability(1);
+                if (availabilityData && availabilityData.success) {
+                    liveData.todayAvailability = availabilityData;
+                    logger.info(`📊 Fetched availability data for AI context`);
+                }
+            } catch (e) {
+                logger.debug(`Could not fetch availability: ${e.message}`);
+            }
+
+            // Try to get schedule
+            try {
+                const scheduleData = await supraApi.getSchedule();
+                if (scheduleData && scheduleData.success) {
+                    liveData.schedule = scheduleData;
+                    logger.info(`📊 Fetched schedule data for AI context`);
+                }
+            } catch (e) {
+                logger.debug(`Could not fetch schedule: ${e.message}`);
+            }
+
+            // Pass live data to AI if we got any
+            const hasLiveData = Object.keys(liveData).length > 0;
+            replyMessage = await aiService.generateReply(
+                messageText,
+                senderName,
+                hasLiveData ? liveData : null
+            );
+
             if (replyMessage) {
-                logger.info(`🤖 AI generated reply for ${sender}`);
+                logger.info(`🤖 AI generated reply for ${sender} (with${hasLiveData ? '' : 'out'} live data)`);
             }
         } catch (error) {
             logger.error('AI reply failed, falling back to keywords:', error.message);
