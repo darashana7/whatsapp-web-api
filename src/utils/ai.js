@@ -151,6 +151,19 @@ For availability:
     }
 
     /**
+     * Get current AI configuration
+     */
+    getConfig() {
+        return {
+            enabled: this.isEnabled(),
+            provider: this.provider,
+            model: this.model,
+            hasOpenRouter: !!this.openrouterKey,
+            hasGoogle: !!this.googleKey
+        };
+    }
+
+    /**
      * Generate AI response for a message
      * @param {string} userMessage - The user's message
      * @param {string} senderName - Optional sender name for context
