@@ -14,6 +14,11 @@ header('Access-Control-Allow-Methods: GET, POST');
 header('Access-Control-Allow-Headers: Content-Type, X-API-Key');
 header('Content-Type: application/json');
 
+// DEBUG: Enable error reporting
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 // Handle preflight
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
@@ -23,8 +28,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 // API Key for security (set this in the bot's environment variables)
 define('API_KEY', 'supra_bot_api_key_2024');
 
-// Database configuration - uses same config as existing admin
-require_once('../admin/config.php');
+// Database configuration
+// We need to look for config.php in the parent directory (root folder)
+
+// Path 1: Parent directory using dirname
+$configPath1 = dirname(__DIR__) . '/config.php';
+
+// Path 2: Document root
+$configPath2 = $_SERVER['DOCUMENT_ROOT'] . '/config.php';
+
+$conn = null;
+
+if (file_exists($configPath1)) {
+    require_once($configPath1);
+} elseif (file_exists($configPath2)) {
+    require_once($configPath2);
+} else {
+    // Debug info if config fails
+    http_response_code(500);
+    echo json_encode([
+        'error' => 'Database configuration not found', 
+        'debug_paths' => [$configPath1, $configPath2]
+    ]);
+    exit;
+}
+
+// Check if $conn exists from config.php
+if (!isset($conn) || !$conn) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Database connection variable $conn not set']);
+    exit;
+}
 
 // Verify API key
 function verifyApiKey() {
