@@ -76,20 +76,74 @@ For availability:
     }
 
     initialize() {
+        // Store both API keys for runtime switching
+        this.openrouterKey = process.env.OPENROUTER_API_KEY || null;
+        this.openrouterModel = process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-exp:free';
+        this.googleKey = process.env.GOOGLE_API_KEY || null;
+        this.googleModel = process.env.GOOGLE_MODEL || 'gemini-2.0-flash';
+
         // Priority: OpenRouter > Google Gemini
-        if (process.env.OPENROUTER_API_KEY) {
+        if (this.openrouterKey) {
             this.provider = 'openrouter';
-            this.apiKey = process.env.OPENROUTER_API_KEY;
-            this.model = process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-exp:free';
+            this.apiKey = this.openrouterKey;
+            this.model = this.openrouterModel;
             logger.info(`AI Service initialized with OpenRouter (${this.model})`);
-        } else if (process.env.GOOGLE_API_KEY) {
+        } else if (this.googleKey) {
             this.provider = 'google';
-            this.apiKey = process.env.GOOGLE_API_KEY;
-            this.model = process.env.GOOGLE_MODEL || 'gemini-2.0-flash';
+            this.apiKey = this.googleKey;
+            this.model = this.googleModel;
             logger.info(`AI Service initialized with Google Gemini (${this.model})`);
         } else {
             logger.info('AI Service: No API key configured. Using keyword-based replies.');
         }
+    }
+
+    /**
+     * Switch AI provider at runtime
+     * @param {string} newProvider - 'openrouter' or 'google'
+     * @returns {object} - Result with success status
+     */
+    setProvider(newProvider) {
+        if (newProvider === 'openrouter') {
+            if (!this.openrouterKey) {
+                return { success: false, error: 'OpenRouter API key not configured' };
+            }
+            this.provider = 'openrouter';
+            this.apiKey = this.openrouterKey;
+            this.model = this.openrouterModel;
+            logger.info(`AI Provider switched to OpenRouter (${this.model})`);
+        } else if (newProvider === 'google') {
+            if (!this.googleKey) {
+                return { success: false, error: 'Google API key not configured' };
+            }
+            this.provider = 'google';
+            this.apiKey = this.googleKey;
+            this.model = this.googleModel;
+            logger.info(`AI Provider switched to Google Gemini (${this.model})`);
+        } else if (newProvider === 'disabled') {
+            this.provider = null;
+            this.apiKey = null;
+            logger.info('AI Provider disabled');
+        } else {
+            return { success: false, error: 'Invalid provider. Use: openrouter, google, or disabled' };
+        }
+
+        return {
+            success: true,
+            provider: this.provider,
+            model: this.model,
+            message: `Switched to ${newProvider}`
+        };
+    }
+
+    /**
+     * Get available providers
+     */
+    getAvailableProviders() {
+        const providers = ['disabled'];
+        if (this.openrouterKey) providers.push('openrouter');
+        if (this.googleKey) providers.push('google');
+        return providers;
     }
 
     isEnabled() {

@@ -266,8 +266,35 @@ router.delete('/auto-reply/keyword/:keyword', (req, res) => {
 router.get('/ai', (req, res) => {
     res.json({
         success: true,
-        config: aiService.getConfig()
+        config: aiService.getConfig(),
+        availableProviders: aiService.getAvailableProviders()
     });
+});
+
+/**
+ * Switch AI provider
+ */
+router.put('/ai/provider', (req, res) => {
+    const { provider } = req.body;
+
+    if (!provider) {
+        return res.status(400).json({
+            success: false,
+            error: 'Provider is required (openrouter, google, or disabled)'
+        });
+    }
+
+    const result = aiService.setProvider(provider);
+
+    if (result.success) {
+        res.json({
+            success: true,
+            ...result,
+            config: aiService.getConfig()
+        });
+    } else {
+        res.status(400).json(result);
+    }
 });
 
 /**

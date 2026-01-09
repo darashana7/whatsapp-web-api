@@ -367,87 +367,99 @@
             <div class="card">
                 <h2><span>⚙️</span> AI Settings</h2>
                 <div class="form-group">
-                    <label>AI Status</label>
+                    <label>AI Provider</label>
                     <div style="display: flex; gap: 10px; align-items: center;">
-                        <button class="btn btn-primary" id="toggle-ai-btn" onclick="toggleAI()">
-                            🤖 Toggle AI
+                        <select id="provider-select" class="form-group"
+                            style="padding: 10px; border-radius: 8px; background: rgba(0,0,0,0.3); color: #fff; border: 1px solid rgba(255,255,255,0.1); flex: 1;"
+                            onchange="changeProvider()">
+                            <option value="disabled">🚫 Disabled</option>
+                            <option value="openrouter">🌐 OpenRouter</option>
+                            <option value="google">🔷 Google Gemini</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Current Model</label>
+                    <div id="current-model"
+                        style="padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px; font-size: 0.9rem; color: #25D366;">
+                        Loading...
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Features Toggle</label>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="quick-btn" id="toggle-ai-btn" onclick="toggleAI()" style="flex: 1;">
+                            🤖 AI: <span id="ai-toggle-status">ON</span>
                         </button>
-                        <span id="ai-toggle-status" class="badge badge-success">Enabled</span>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Database Queries</label>
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <button class="btn btn-secondary" id="toggle-db-btn" onclick="toggleDB()">
-                            📊 Toggle DB
+                        <button class="quick-btn" id="toggle-db-btn" onclick="toggleDB()" style="flex: 1;">
+                            📊 DB: <span id="db-toggle-status">ON</span>
                         </button>
-                        <span id="db-toggle-status" class="badge badge-success">Enabled</span>
                     </div>
                 </div>
-                <div style="margin-top: 15px; font-size: 0.85rem; color: #888;">
-                    <p>💡 AI uses live database for responses</p>
-                    <p>📍 API: supratravels.gt.tc/api/bot.php</p>
-                </div>
-            </div>
-
-            <!-- Send Message Card -->
-            <div class="card">
-                <h2><span>✉️</span> Send Message</h2>
-                <div class="form-group">
-                    <label>Phone Number</label>
-                    <input type="text" id="phone" placeholder="e.g., 9876543210 or +919876543210">
-                </div>
-                <div class="form-group">
-                    <label>Message</label>
-                    <textarea id="message" placeholder="Type your message here..."></textarea>
-                </div>
-                <button class="btn btn-primary" id="send-btn" onclick="sendMessage()">
-                    📤 Send Message
-                </button>
-                <div id="send-response" class="response-box" style="display: none;"></div>
-            </div>
-
-            <!-- AI Test Card -->
-            <div class="card">
-                <h2><span>🤖</span> Test AI Response</h2>
-                <div class="quick-actions">
-                    <button class="quick-btn" onclick="testAI('Hi')">Hi</button>
-                    <button class="quick-btn" onclick="testAI('Check my booking')">My Booking</button>
-                    <button class="quick-btn" onclick="testAI('Seats available tomorrow?')">Availability</button>
-                    <button class="quick-btn" onclick="testAI('Bus schedule')">Schedule</button>
-                    <button class="quick-btn" onclick="testAI('Price for Bangalore to Hosadurga')">Price</button>
-                    <button class="quick-btn" onclick="testAI('Tour packages')">Packages</button>
-                </div>
-                <div class="form-group">
-                    <label>Test Message</label>
-                    <input type="text" id="ai-message" placeholder="Type a message to test AI response...">
-                </div>
-                <button class="btn btn-primary" id="ai-btn" onclick="testAI()">
-                    🧠 Test AI
-                </button>
-                <div id="ai-response" class="response-box" style="display: none;"></div>
-            </div>
-
-            <!-- Logs Card -->
-            <div class="card">
-                <h2><span>📜</span> Activity Log</h2>
-                <div class="logs" id="logs">
-                    <div class="log-entry info">
-                        <span class="time">[--:--:--]</span>
-                        Dashboard loaded. Checking status...
-                    </div>
-                </div>
-                <div style="margin-top: 15px;">
-                    <button class="btn btn-secondary" onclick="clearLogs()">🗑️ Clear Logs</button>
+                <div style="margin-top: 10px; font-size: 0.8rem; color: #666;">
+                    💡 Set both API keys in Railway for provider switching
                 </div>
             </div>
         </div>
 
-        <footer>
-            <p>WhatsApp Web API &bull; <a href="/api/qr?format=html" target="_blank">📱 QR Code</a> &bull; <a
-                    href="/api/health" target="_blank">Health Check</a> &bull; <a href="https://supratravels.gt.tc"
-                    target="_blank">Supra Travels</a></p>
-        </footer>
+        <!-- Send Message Card -->
+        <div class="card">
+            <h2><span>✉️</span> Send Message</h2>
+            <div class="form-group">
+                <label>Phone Number</label>
+                <input type="text" id="phone" placeholder="e.g., 9876543210 or +919876543210">
+            </div>
+            <div class="form-group">
+                <label>Message</label>
+                <textarea id="message" placeholder="Type your message here..."></textarea>
+            </div>
+            <button class="btn btn-primary" id="send-btn" onclick="sendMessage()">
+                📤 Send Message
+            </button>
+            <div id="send-response" class="response-box" style="display: none;"></div>
+        </div>
+
+        <!-- AI Test Card -->
+        <div class="card">
+            <h2><span>🤖</span> Test AI Response</h2>
+            <div class="quick-actions">
+                <button class="quick-btn" onclick="testAI('Hi')">Hi</button>
+                <button class="quick-btn" onclick="testAI('Check my booking')">My Booking</button>
+                <button class="quick-btn" onclick="testAI('Seats available tomorrow?')">Availability</button>
+                <button class="quick-btn" onclick="testAI('Bus schedule')">Schedule</button>
+                <button class="quick-btn" onclick="testAI('Price for Bangalore to Hosadurga')">Price</button>
+                <button class="quick-btn" onclick="testAI('Tour packages')">Packages</button>
+            </div>
+            <div class="form-group">
+                <label>Test Message</label>
+                <input type="text" id="ai-message" placeholder="Type a message to test AI response...">
+            </div>
+            <button class="btn btn-primary" id="ai-btn" onclick="testAI()">
+                🧠 Test AI
+            </button>
+            <div id="ai-response" class="response-box" style="display: none;"></div>
+        </div>
+
+        <!-- Logs Card -->
+        <div class="card">
+            <h2><span>📜</span> Activity Log</h2>
+            <div class="logs" id="logs">
+                <div class="log-entry info">
+                    <span class="time">[--:--:--]</span>
+                    Dashboard loaded. Checking status...
+                </div>
+            </div>
+            <div style="margin-top: 15px;">
+                <button class="btn btn-secondary" onclick="clearLogs()">🗑️ Clear Logs</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>WhatsApp Web API &bull; <a href="/api/qr?format=html" target="_blank">📱 QR Code</a> &bull; <a
+                href="/api/health" target="_blank">Health Check</a> &bull; <a href="https://supratravels.gt.tc"
+                target="_blank">Supra Travels</a></p>
+    </footer>
     </div>
 
     <script>
@@ -514,9 +526,18 @@
                 if (status.ai?.enabled) {
                     aiStatus.textContent = `✅ ${status.ai.provider}`;
                     aiStatus.className = 'value online';
+
+                    // Update dropdown to match current provider
+                    const select = document.getElementById('provider-select');
+                    select.value = status.ai.provider;
+
+                    // Update model display
+                    document.getElementById('current-model').textContent = status.ai.model || 'Unknown';
                 } else {
-                    aiStatus.textContent = '❌ Not Configured';
+                    aiStatus.textContent = '❌ Disabled';
                     aiStatus.className = 'value offline';
+                    document.getElementById('provider-select').value = 'disabled';
+                    document.getElementById('current-model').textContent = 'No provider selected';
                 }
 
                 // Update uptime
@@ -629,20 +650,20 @@
         // Toggle AI on/off
         async function toggleAI() {
             const statusBadge = document.getElementById('ai-toggle-status');
+            const currentlyOff = statusBadge.textContent === 'OFF';
             addLog('Toggling AI status...');
 
             try {
                 const res = await fetch(`${API_BASE}/auto-reply`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ useAI: statusBadge.textContent === 'Disabled' })
+                    body: JSON.stringify({ useAI: currentlyOff })
                 });
 
                 const data = await res.json();
                 if (data.success) {
                     const newStatus = data.config?.useAI ?? true;
-                    statusBadge.textContent = newStatus ? 'Enabled' : 'Disabled';
-                    statusBadge.className = newStatus ? 'badge badge-success' : 'badge badge-error';
+                    statusBadge.textContent = newStatus ? 'ON' : 'OFF';
                     addLog(`AI ${newStatus ? 'enabled' : 'disabled'}`, 'success');
                 } else {
                     addLog(`Failed to toggle AI: ${data.error}`, 'error');
@@ -655,26 +676,55 @@
         // Toggle Database queries on/off
         async function toggleDB() {
             const statusBadge = document.getElementById('db-toggle-status');
+            const currentlyOff = statusBadge.textContent === 'OFF';
             addLog('Toggling Database queries...');
 
             try {
                 const res = await fetch(`${API_BASE}/auto-reply`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ useDatabase: statusBadge.textContent === 'Disabled' })
+                    body: JSON.stringify({ useDatabase: currentlyOff })
                 });
 
                 const data = await res.json();
                 if (data.success) {
                     const newStatus = data.config?.useDatabase ?? true;
-                    statusBadge.textContent = newStatus ? 'Enabled' : 'Disabled';
-                    statusBadge.className = newStatus ? 'badge badge-success' : 'badge badge-error';
+                    statusBadge.textContent = newStatus ? 'ON' : 'OFF';
                     addLog(`Database queries ${newStatus ? 'enabled' : 'disabled'}`, 'success');
                 } else {
                     addLog(`Failed to toggle DB: ${data.error}`, 'error');
                 }
             } catch (error) {
                 addLog(`Error toggling DB: ${error.message}`, 'error');
+            }
+        }
+
+        // Change AI provider
+        async function changeProvider() {
+            const select = document.getElementById('provider-select');
+            const newProvider = select.value;
+            addLog(`Switching to provider: ${newProvider}...`);
+
+            try {
+                const res = await fetch(`${API_BASE}/ai/provider`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ provider: newProvider })
+                });
+
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById('current-model').textContent = data.model || 'Disabled';
+                    addLog(`Switched to ${newProvider}: ${data.model || 'disabled'}`, 'success');
+                    refreshStatus();
+                } else {
+                    addLog(`Failed to switch: ${data.error}`, 'error');
+                    // Revert dropdown
+                    refreshStatus();
+                }
+            } catch (error) {
+                addLog(`Error switching provider: ${error.message}`, 'error');
+                refreshStatus();
             }
         }
 
