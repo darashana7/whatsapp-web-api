@@ -58,7 +58,7 @@ class WhatsAppClient {
             logger.info('QR Code received. Scan with WhatsApp mobile app:');
 
             // Display in terminal
-            qrcode.generate(qr, { small: true });
+            // qrcode.generate(qr, { small: true });
 
             // Store for API access
             this.qrCode = qr;

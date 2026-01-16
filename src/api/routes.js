@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const whatsappClient = require('../whatsapp/client');
-const { getAutoReplyConfig, updateAutoReplyConfig, setKeyword, removeKeyword } = require('../whatsapp/handlers');
+const { getAutoReplyConfig, updateAutoReplyConfig, setKeyword, removeKeyword, testReply } = require('../whatsapp/handlers');
 const { isValidPhoneNumber, normalizePhoneNumber } = require('../utils/phone');
 const aiService = require('../utils/ai');
 const logger = require('../utils/logger');
@@ -352,6 +352,229 @@ router.post('/ai/test', async (req, res) => {
             error: error.message
         });
     }
+});
+
+/**
+ * Test bot reply - simulates receiving a message
+ */
+router.post('/test-reply', async (req, res) => {
+    const { message, phone } = req.body;
+
+    if (!message) {
+        return res.status(400).json({
+            success: false,
+            error: 'Message is required'
+        });
+    }
+
+    try {
+        const result = await testReply(message, phone || '9999999999');
+        res.json({
+            success: true,
+            input: message,
+            phone: phone || '9999999999',
+            ...result
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * Test page - HTML interface for testing bot
+ */
+router.get('/test', (req, res) => {
+    res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WhatsApp Bot Tester</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #075E54 0%, #128C7E 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: #ECE5DD;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .header {
+            background: #075E54;
+            color: white;
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .header .avatar {
+            width: 40px;
+            height: 40px;
+            background: #25D366;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        .header h1 { font-size: 18px; font-weight: 500; }
+        .header small { opacity: 0.8; font-size: 12px; }
+        .chat {
+            height: 400px;
+            overflow-y: auto;
+            padding: 15px;
+            background: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAIUlEQVQoU2NkYGD4z4AEGBkZQRQDKRYYMGIwjiJyKgQAOmQDAGIVuNYAAAAASUVORK5CYII=');
+        }
+        .message {
+            max-width: 80%;
+            padding: 8px 12px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .message.sent {
+            background: #DCF8C6;
+            margin-left: auto;
+            border-bottom-right-radius: 0;
+        }
+        .message.received {
+            background: white;
+            border-bottom-left-radius: 0;
+        }
+        .message .time {
+            font-size: 11px;
+            color: #999;
+            text-align: right;
+            margin-top: 4px;
+        }
+        .input-area {
+            display: flex;
+            gap: 10px;
+            padding: 10px 15px;
+            background: #F0F0F0;
+        }
+        .input-area input {
+            flex: 1;
+            padding: 12px 15px;
+            border: none;
+            border-radius: 25px;
+            font-size: 15px;
+            outline: none;
+        }
+        .input-area button {
+            width: 45px;
+            height: 45px;
+            border: none;
+            background: #25D366;
+            border-radius: 50%;
+            cursor: pointer;
+            color: white;
+            font-size: 20px;
+        }
+        .input-area button:hover { background: #128C7E; }
+        .quick-btns {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            padding: 10px 15px;
+            background: #F0F0F0;
+            border-top: 1px solid #DDD;
+        }
+        .quick-btns button {
+            padding: 6px 12px;
+            border: 1px solid #25D366;
+            background: white;
+            border-radius: 15px;
+            cursor: pointer;
+            font-size: 12px;
+            color: #075E54;
+        }
+        .quick-btns button:hover { background: #DCF8C6; }
+        .reason { font-size: 11px; color: #666; font-style: italic; padding: 0 15px 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="avatar">🚌</div>
+            <div>
+                <h1>Supra Travels Bot</h1>
+                <small>Test Mode - Desktop Simulator</small>
+            </div>
+        </div>
+        <div class="chat" id="chat"></div>
+        <div class="reason" id="reason"></div>
+        <div class="quick-btns">
+            <button onclick="send('Hi')">Hi</button>
+            <button onclick="send('1')">1</button>
+            <button onclick="send('2')">2</button>
+            <button onclick="send('3')">3</button>
+            <button onclick="send('4')">4</button>
+            <button onclick="send('5')">5</button>
+            <button onclick="send('my booking')">My Booking</button>
+            <button onclick="send('seats available')">Availability</button>
+        </div>
+        <div class="input-area">
+            <input type="text" id="msg" placeholder="Type a message..." onkeypress="if(event.key==='Enter')send()">
+            <button onclick="send()">➤</button>
+        </div>
+    </div>
+    <script>
+        const chat = document.getElementById('chat');
+        const reason = document.getElementById('reason');
+        const msgInput = document.getElementById('msg');
+        
+        function addMessage(text, type) {
+            const div = document.createElement('div');
+            div.className = 'message ' + type;
+            div.innerHTML = text + '<div class="time">' + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) + '</div>';
+            chat.appendChild(div);
+            chat.scrollTop = chat.scrollHeight;
+        }
+        
+        async function send(text) {
+            const msg = text || msgInput.value.trim();
+            if (!msg) return;
+            
+            msgInput.value = '';
+            addMessage(msg, 'sent');
+            
+            try {
+                const res = await fetch('/api/test-reply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: msg })
+                });
+                const data = await res.json();
+                
+                if (data.reply) {
+                    addMessage(data.reply, 'received');
+                }
+                reason.textContent = '↳ ' + (data.reason || 'No response');
+            } catch (err) {
+                addMessage('❌ Error: ' + err.message, 'received');
+            }
+        }
+        
+        // Welcome message
+        addMessage('🙏 Welcome! Type a message or use quick buttons below.', 'received');
+    </script>
+</body>
+</html>
+    `);
 });
 
 module.exports = router;

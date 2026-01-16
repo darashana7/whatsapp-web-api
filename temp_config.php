@@ -1,8 +1,8 @@
 <?php
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "supra_travels";
+$servername = "sql203.infinityfree.com";
+$username = "if0_40474342";
+$password = "xFxljuC1wQyyK8";
+$dbname = "if0_40474342_supra";
 
 // Create connection
 $conn = new mysqli($servername, $username, $password, $dbname);

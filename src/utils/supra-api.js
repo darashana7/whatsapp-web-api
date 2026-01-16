@@ -26,16 +26,31 @@ class SupraApiClient {
                 method: 'GET',
                 headers: {
                     'X-API-Key': this.apiKey,
+                    'Accept': 'application/json, text/plain, */*',
+                    'Accept-Language': 'en-US,en;q=0.9',
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache',
+                    'Connection': 'keep-alive',
                     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                 },
                 timeout: 10000
             });
 
             if (!response.ok) {
+                const errorText = await response.text();
+                logger.error(`API status error: ${response.status}`, { text: errorText.substring(0, 200) });
                 throw new Error(`API error: ${response.status}`);
             }
 
-            const data = await response.json();
+            const responseText = await response.text();
+            let data;
+            try {
+                data = JSON.parse(responseText);
+            } catch (e) {
+                logger.error('Failed to parse JSON response', { text: responseText.substring(0, 200) });
+                throw new Error('Invalid JSON response from server');
+            }
+
             logger.debug(`API Response: ${action}`, data);
             return data;
         } catch (error) {
@@ -91,35 +106,60 @@ class SupraApiClient {
     }
 
     /**
-     * Format booking info for WhatsApp message
+     * Format booking info for WhatsApp message (ticket-style)
      */
     formatBookingResponse(data) {
         if (!data || !data.success) {
-            return "❌ Sorry, couldn't check booking status. Please try again later or call +91 96860 20017.";
+            return "❌ Sorry, couldn't check booking status.\n\n📞 Please call: +91 96860 20017";
         }
 
         if (!data.found) {
-            return "❌ No booking found for this phone number.\n\n🎫 To book: supratravels.gt.tc/booking.php\n📞 Call: +91 96860 20017";
+            return `❌ *No booking found for your number*
+
+🎫 *Want to book a ticket?*
+🌐 https://supratravels.gt.tc/booking.php
+
+📞 Or call: +91 96860 20017`;
         }
 
-        let message = `✅ Found ${data.count} booking(s):\n\n`;
+        let message = `✅ *Found ${data.count} Booking(s)*\n`;
+        message += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
 
         for (const booking of data.bookings) {
-            message += `📋 *Booking #${booking.id}*\n`;
-            message += `👤 ${booking.name}\n`;
-            message += `🛣️ ${booking.route}\n`;
-            message += `📅 ${booking.date}\n`;
-            message += `🪑 Seats: ${booking.seats}\n`;
-            message += `💰 ₹${booking.amount}\n`;
-            message += `📊 Status: ${booking.status}\n`;
+            // Status emoji
+            const statusEmoji = booking.status.toLowerCase() === 'confirmed' ? '✅' :
+                booking.status.toLowerCase() === 'pending' ? '⏳' : '❌';
+
+            message += `🎫 *TICKET #${booking.id}*\n`;
+            message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+            message += `👤 *Passenger:* ${booking.name}\n`;
+            message += `🛣️ *Route:* ${booking.route}\n`;
+            message += `📅 *Travel Date:* ${this.formatDate(booking.date)}\n`;
+            message += `🪑 *Seat(s):* ${booking.seats}\n`;
+            message += `💰 *Amount:* ₹${booking.amount}\n`;
+            message += `${statusEmoji} *Status:* ${booking.status}\n`;
             if (booking.transaction_id) {
-                message += `🔢 Txn: ${booking.transaction_id}\n`;
+                message += `🔢 *Txn ID:* ${booking.transaction_id}\n`;
             }
-            message += '\n';
+            message += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
         }
 
-        message += "Need help? Call +91 96860 20017";
+        message += `📞 Need help? Call +91 96860 20017\n`;
+        message += `🌐 supratravels.gt.tc`;
         return message;
+    }
+
+    /**
+     * Format date to readable format
+     */
+    formatDate(dateStr) {
+        try {
+            const date = new Date(dateStr);
+            const options = { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' };
+            return date.toLocaleDateString('en-IN', options);
+        } catch (e) {
+            return dateStr;
+        }
     }
 
     /**
